@@ -1,9 +1,36 @@
 import validators, streamlit as st
-from langchain.chat_models import ChatOpenAI
 from langchain.document_loaders import UnstructuredURLLoader
 from langchain.chains.summarize import load_summarize_chain
 from langchain.prompts import PromptTemplate
+import os
+import time
+from dotenv import load_dotenv
+from langchain.chains import LLMChain
+from langchain.chat_models import ChatOpenAI, ChatVertexAI
+from langchain.memory import ConversationBufferMemory
+from langchain.prompts import PromptTemplate
 
+
+from trulens_eval import Feedback, Huggingface, Tru, TruChain
+from trulens_eval.feedback.provider.hugs import Huggingface
+
+memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+conversation = LLMChain(llm=llm, prompt=prompt, verbose=True, memory=memory)
+
+hugs = Huggingface()
+tru = Tru()
+
+f_lang_match = Feedback(hugs.language_match).on_input_output()
+feedback_nontoxic = Feedback(huggingface_provider.not_toxic).on_output()
+f_pii_detection = Feedback(hugs.pii_detection).on_input()
+feedback_positive = Feedback(huggingface_provider.positive_sentiment).on_output()
+
+# TruLens chain recorder
+chain_recorder = TruChain(
+    conversation,
+    app_id="contextual-chatbot",
+    feedbacks=[f_lang_match, feedback_nontoxic, f_pii_detection, feedback_positive],
+)
 # Streamlit app
 st.subheader('Summarize URL')
 
@@ -31,8 +58,9 @@ if st.button("Summarize"):
                 
                 # Initialize the ChatOpenAI module, load and run the summarize chain
                 llm = ChatOpenAI(temperature=0, model=model, openai_api_key=openai_api_key)
+               
                 prompt_template = """Write a summary of the following in 250-300 words:
-                    
+                
                     {text}
 
                 """
